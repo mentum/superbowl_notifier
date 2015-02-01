@@ -6,31 +6,37 @@ var Lambdaws    = require('lambdaws'),
 
 Lambdaws.config(Configs.LAMBDAWS);
 
+var logger = Lawgs('SuperbowlTweets');
+logger.settings.aws = Configs.AWS;
+logger.configure({});
+
 function tweetCompute(tweets, callback) {
     var FOOTBALL_LEXICAL_FIELD = ['touchdown', 'fumble', 'interception', 'turnover', 'field goal'],
         plainTextTweets = JSON.stringify(tweets),
         AWS = require('aws-sdk');
 
-	var sms = FOOTBALL_LEXICAL_FIELD.filter(function(term) {
+	var keywords = FOOTBALL_LEXICAL_FIELD.filter(function(term) {
 		var termRegEx = new RegExp(term, 'gi'),
 			termCount = (plainTextTweets.match(termRegEx) || []).length,
-			threshold = 0.5 * tweets.length;
+			threshold = 0.55 * tweets.length;
 		return termCount >= threshold;
-	}).reduce(function(sms, word) { return sms += word + ' ' }, '');
+	});
 
-	if(sms.length > 0) {
-		new AWS.SNS().publish({
-			Message: 'Superbowl Alert: ' + sms,
-			TopicArn: 'arn:aws:sns:us-east-1:246175073899:Superbowl'
-		}, function() { callback('alerts sent') });
-	} else callback('nothing special');
+	callback(keywords);
+}
+
+function notify(notification, callback){
+	var sns = require('aws-sdk').SNS();
+	var snsCallback = function() {callback('alerts sent')};
+	var snsData = {
+		Message: 'Super Bowl XLIX Alert: ' + notification,
+		TopicArn: 'arn:aws:sns:us-east-1:246175073899:Superbowl'
+	}
+	sns.publish(snsData, snsCallback);
 }
 
 var cloudedTweetCompute = Lambdaws.create(tweetCompute, [], { name: 'SUPERBOWL' });
-
-var logger = Lawgs('SuperbowlTweets');
-logger.settings.aws = Configs.AWS;
-logger.configure({});
+var cloudedNotify 		= Lambdaws.create(notify, [], {name : 'NOTIFY'});
 
 function mapTweet(tweet){
 	return {
@@ -43,7 +49,7 @@ function mapTweet(tweet){
 }
 
 var stream = new Stream(Configs.TWITTER);
-stream.stream({track:'#superbowl'});
+stream.stream({track:'superbowl'});
 
 Rx.Node.fromEvent(stream, 'data')
 	.map(mapTweet)
