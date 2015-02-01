@@ -1,17 +1,17 @@
-var	Lambdaws 	= require('lambdaws'),
-	Configs		= require('./configs'),
-	Stream 		= require('user-stream'),
-	Lawgs		= require('lawgs'),
-	Rx			= require('rx');
+var Lambdaws    = require('lambdaws'),
+    Configs     = require('./configs'),
+    Stream      = require('user-stream'),
+    Lawgs       = require('lawgs'),
+    Rx          = require('rx');
 
 Lambdaws.config(Configs.LAMBDAWS);
 
 function tweetCompute(tweets, callback) {
-	var FOOTBALL_LEXICAL_FIELD = [ 'touchdown', 'fumble', 'interception', 'turnover', 'field goal' ],
-		plainTextTweets = JSON.stringify(tweets),
-		AWS = require('aws-sdk');
+    var FOOTBALL_LEXICAL_FIELD = ['touchdown', 'fumble', 'interception', 'turnover', 'field goal'],
+        plainTextTweets = JSON.stringify(tweets),
+        AWS = require('aws-sdk');
 
-	var sms = FOOTBALL_LEXICAL_FIELD.filter(function(term){
+	var sms = FOOTBALL_LEXICAL_FIELD.filter(function(term) {
 		var termRegEx = new RegExp(term, 'gi'),
 			termCount = (plainTextTweets.match(termRegEx) || []).length,
 			threshold = 0.5 * tweets.length;
@@ -26,11 +26,11 @@ function tweetCompute(tweets, callback) {
 	} else callback('nothing special');
 }
 
-var cloudedTweetCompute = Lambdaws.create(tweetCompute, [], { name: 'SUPERBOWL'});
+var cloudedTweetCompute = Lambdaws.create(tweetCompute, [], { name: 'SUPERBOWL' });
 
 var logger = Lawgs('SuperbowlTweets');
 logger.settings.aws = Configs.AWS;
-logger.configure({ });
+logger.configure({});
 
 function mapTweet(tweet){
 	return {
@@ -49,7 +49,7 @@ Rx.Node.fromEvent(stream, 'data')
 	.map(mapTweet)
 	.do(function(tweet) { logger.log('tweet', tweet) })
 	.bufferWithTimeOrCount(3000, 1000)
-	.filter(function(a){return a.length >0})
-	.subscribe(function(tweets) { cloudedTweetCompute(tweets, function() { /* Discard response */ }) });
+	.filter(function(a) { return a.length > 0 })
+	.subscribe(function(tweets) { cloudedTweetCompute(tweets, function() { /* Discard response */ }) } );
 
 setTimeout(function() {}, 100000 * 100000); // Keep Alive
